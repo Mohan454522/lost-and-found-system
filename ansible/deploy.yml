@@ -1,0 +1,35 @@
+---
+- name: Deploy Lost & Found Application
+  hosts: all
+  become: yes
+  
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Install Python Docker module
+      pip:
+        name: docker
+
+    - name: Build Docker image
+      docker_image:
+        name: lost-found-app
+        build:
+          path: "{{ playbook_dir }}/../"
+        source: build
+        state: present
+
+    - name: Run Docker container
+      docker_container:
+        name: lost-found-app
+        image: lost-found-app:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "5000:5000"
+        env:
+          DATABASE_URL: "sqlite:///lost_found.db"
+          SECRET_KEY: "ansible-deployment-secret"

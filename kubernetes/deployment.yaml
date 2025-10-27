@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lost-found-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: lost-found-app
+  template:
+    metadata:
+      labels:
+        app: lost-found-app
+    spec:
+      containers:
+      - name: lost-found-app
+        image: lost-found-app:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URL
+          value: "sqlite:///lost_found.db"
+        - name: SECRET_KEY
+          value: "your-production-secret"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lost-found-service
+spec:
+  selector:
+    app: lost-found-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+  type: LoadBalancer

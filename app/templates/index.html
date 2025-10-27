@@ -1,0 +1,44 @@
+﻿{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="hero-section p-5 rounded mb-4">
+            <h1 class="display-4">Welcome to Lost & Found</h1>
+            <p class="lead">Find your lost items or help others find theirs. Join our community today!</p>
+        </div>
+
+        <div class="quick-actions mb-4">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary me-2">
+                <i class="fas fa-user-plus"></i> Join Now
+            </a>
+            <a href="{{ url_for('items.search_items') }}" class="btn btn-outline-primary">
+                <i class="fas fa-search"></i> Search Items
+            </a>
+        </div>
+
+        <h3>Recently Reported Items</h3>
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info">No items reported yet. Be the first to report!</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-search"></i> Quick Search</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('items.search_items') }}" method="get">
+                    <div class="mb-3">
+                        <input type="text" name="q" class="form-control" placeholder="Search items...">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Search Items</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
