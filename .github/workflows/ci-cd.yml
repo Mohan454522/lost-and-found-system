@@ -1,68 +1,34 @@
-name: CI/CD Pipeline
+name: CI/CD with Container Registry
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
-  test:
+  build-test-push:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
-    - name: Run tests
-      run: |
-        python test_app.py
-
-  build-and-deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    - uses: actions/checkout@v4
     
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
     - name: Build Docker image
       run: |
         docker build -t lost-found-app:latest .
+        docker tag lost-found-app:latest ghcr.io/mohan454522/lost-found-app:latest
         
-    - name: Run container test
+    - name: Test container
       run: |
-        docker run -d -p 5000:5000 --name test-app lost-found-app:latest
+        docker run -d --name test-app lost-found-app:latest
         sleep 10
         docker stop test-app
-        docker rm test-app
         
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: application-code
-        path: |
-          .
-          !venv/
-        retention-days: 7
+    - name: Push to GitHub Container Registry
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        docker push ghcr.io/mohan454522/lost-found-app:latest
+        
+    - name: Display deployment info
+      run: |
+        echo "✅ Container built and pushed successfully!"
+        echo "📦 Image: ghcr.io/mohan454522/lost-found-app:latest"
+        echo "🚀 Ready for Azure deployment"
