@@ -18,7 +18,7 @@ resource "azurerm_resource_group" "main" {
   location = "East US"
 }
 
-# Create Container Instance (uses less resources)
+# Create Container Instance
 resource "azurerm_container_group" "lost_found_app" {
   name                = "lost-found-app"
   location            = azurerm_resource_group.main.location
@@ -35,7 +35,7 @@ resource "azurerm_container_group" "lost_found_app" {
     memory = "2.0"
 
     ports {
-      port     = 80    # Changed to port 80
+      port     = 80    # External port 80
       protocol = "TCP"
     }
 
@@ -55,5 +55,5 @@ resource "azurerm_container_group" "lost_found_app" {
 
 # Output the application URL
 output "application_url" {
-  value = "http://${azurerm_container_group.lost_found_app.fqdn}"  # No port needed for 80
+  value = "http://${azurerm_container_group.lost_found_app.fqdn}"
 }

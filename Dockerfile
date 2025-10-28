@@ -18,16 +18,12 @@ COPY . .
 RUN mkdir -p instance templates static
 RUN chmod 755 instance templates static
 
-# Create non-root user (with proper permissions)
-RUN useradd -m -u 1000 webuser && chown -R webuser:webuser /app
-USER webuser
-
 # Expose port
-EXPOSE 80
+EXPOSE 5000
 
 # Set environment variables
 ENV FLASK_APP=run.py
 ENV FLASK_ENV=production
 
-# Run the application with gunicorn using run.py on port 80
-CMD ["gunicorn", "--bind", "0.0.0.0:80", "run:app"]
+# Run on port 5000 internally
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "run:app"]
