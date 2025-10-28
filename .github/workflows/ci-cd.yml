@@ -1,16 +1,45 @@
-name: CI/CD with Container Registry
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 jobs:
-  build-test-push:
+  test:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run tests
+      run: |
+        python test_app.py
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
     - name: Build Docker image
       run: |
         docker build -t lost-found-app:latest .
@@ -21,6 +50,7 @@ jobs:
         docker run -d --name test-app lost-found-app:latest
         sleep 10
         docker stop test-app
+        docker rm test-app
         
     - name: Push to GitHub Container Registry
       run: |
