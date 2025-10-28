@@ -47,8 +47,9 @@ jobs:
         
     - name: Test container
       run: |
-        docker run -d --name test-app lost-found-app:latest
+        docker run -d --name test-app -p 5000:5000 lost-found-app:latest
         sleep 10
+        curl -f http://localhost:5000/health || exit 1
         docker stop test-app
         docker rm test-app
         
@@ -62,32 +63,15 @@ jobs:
         echo "✅ Container built and pushed successfully!"
         echo "📦 Image: ghcr.io/mohan454522/lost-found-app:latest"
 
-  deploy-with-terraform:
+  trigger-render-deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
-      
-    - name: Login to Azure
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-        
-    - name: Deploy with Terraform
+    - name: Trigger Render Deploy
       run: |
-        cd terraform
-        terraform init
-        terraform apply -auto-approve
-        
-    - name: Get application URL
-      run: |
-        cd terraform
-        echo "🎉 Your app is deployed to Azure Container Instances!"
-        echo "🌐 Application URL: http://$(terraform output -raw application_url)"
-        echo "✅ No vCPU quota issues - Deployment successful!"
+        echo "🚀 Triggering Render deployment..."
+        echo "✅ CI/CD Pipeline Complete!"
+        echo "🌐 Your app will auto-deploy to: https://lost-found-system.onrender.com"
+        echo "📊 Render monitors your GitHub repo and auto-deploys on push"
