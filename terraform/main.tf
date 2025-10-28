@@ -1,5 +1,10 @@
+# Configure providers
 terraform {
   required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~>3.0"
+    }
     kubernetes = {
       source = "hashicorp/kubernetes"
       version = "2.16.1"
@@ -7,10 +12,48 @@ terraform {
   }
 }
 
-provider "kubernetes" {
-  config_path = "~/.kube/config"
+provider "azurerm" {
+  features {}
 }
 
+# Create Azure resource group
+resource "azurerm_resource_group" "main" {
+  name     = "mohan-lost-found-rg"
+  location = "East US"
+}
+
+# Create AKS Kubernetes cluster
+resource "azurerm_kubernetes_cluster" "main" {
+  name                = "mohan-aks-cluster"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  dns_prefix          = "mohanaks"
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_B2s"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  tags = {
+    Environment = "Production"
+    Project     = "Lost-Found-System"
+  }
+}
+
+# Configure Kubernetes provider to use our AKS cluster
+provider "kubernetes" {
+  host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
+  client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
+  client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
+  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
+}
+
+# Deploy your application to Kubernetes
 resource "kubernetes_deployment" "lost_found_app" {
   metadata {
     name = "lost-found-app"
@@ -34,7 +77,7 @@ resource "kubernetes_deployment" "lost_found_app" {
 
       spec {
         container {
-          image = "lost-found-app:latest"
+          image = "ghcr.io/mohan454522/lost-found-app:latest"
           name  = "lost-found-app"
 
           port {
@@ -54,6 +97,8 @@ resource "kubernetes_deployment" "lost_found_app" {
       }
     }
   }
+
+  depends_on = [azurerm_kubernetes_cluster.main]
 }
 
 resource "kubernetes_service" "lost_found_service" {
@@ -73,4 +118,11 @@ resource "kubernetes_service" "lost_found_service" {
 
     type = "LoadBalancer"
   }
+
+  depends_on = [kubernetes_deployment.lost_found_app]
+}
+
+# Output the public IP
+output "application_url" {
+  value = "http://${kubernetes_service.lost_found_service.status.0.load_balancer.0.ingress.0.ip}"
 }
