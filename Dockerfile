@@ -23,11 +23,11 @@ RUN useradd -m -u 1000 webuser && chown -R webuser:webuser /app
 USER webuser
 
 # Expose port
-EXPOSE 5000
+EXPOSE 80
 
 # Set environment variables
 ENV FLASK_APP=run.py
 ENV FLASK_ENV=production
 
-# Run the application with gunicorn using run.py
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "run:app"]
+# Run the application with gunicorn using run.py on port 80
+CMD ["gunicorn", "--bind", "0.0.0.0:80", "run:app"]
