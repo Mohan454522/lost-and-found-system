@@ -14,8 +14,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create non-root user
-RUN useradd -m -u 1000 webuser
+# Create necessary directories with proper permissions
+RUN mkdir -p instance templates static
+RUN chmod 755 instance templates static
+
+# Create non-root user (with proper permissions)
+RUN useradd -m -u 1000 webuser && chown -R webuser:webuser /app
 USER webuser
 
 # Expose port
@@ -25,5 +29,5 @@ EXPOSE 5000
 ENV FLASK_APP=run.py
 ENV FLASK_ENV=production
 
-# Run the application
+# Run the application with gunicorn using run.py
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "run:app"]

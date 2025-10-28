@@ -32,7 +32,7 @@ resource "azurerm_container_group" "lost_found_app" {
     name   = "lost-found-app"
     image  = "ghcr.io/mohan454522/lost-found-app:latest"
     cpu    = "1.0"
-    memory = "1.5"
+    memory = "2.0"  # Increased memory
 
     ports {
       port     = 5000
@@ -43,6 +43,7 @@ resource "azurerm_container_group" "lost_found_app" {
       DATABASE_URL = "sqlite:///lost_found.db"
       SECRET_KEY   = "terraform-production-2024"
       FLASK_ENV    = "production"
+      FLASK_APP    = "run.py"  # Fixed to use run.py
     }
   }
 
