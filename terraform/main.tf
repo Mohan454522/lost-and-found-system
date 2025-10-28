@@ -1,3 +1,4 @@
+
 # Configure Azure provider
 terraform {
   required_providers {
@@ -18,32 +19,52 @@ resource "azurerm_resource_group" "main" {
   location = "East US"
 }
 
-# Create Container Instance
-resource "azurerm_container_group" "lost_found_app" {
-  name                = "lost-found-app"
+# Create Container App Environment
+resource "azurerm_container_app_environment" "main" {
+  name                = "lost-found-environment"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
-  ip_address_type     = "Public"
-  dns_name_label      = "mohan-lost-found"
-  os_type             = "Linux"
-  restart_policy      = "Always"
+}
 
-  container {
-    name   = "lost-found-app"
-    image  = "ghcr.io/mohan454522/lost-found-app:latest"
-    cpu    = "1.0"
-    memory = "2.0"
+# Create Container App
+resource "azurerm_container_app" "main" {
+  name                         = "lost-found-app"
+  container_app_environment_id = azurerm_container_app_environment.main.id
+  resource_group_name          = azurerm_resource_group.main.name
+  revision_mode                = "Single"
 
-    ports {
-      port     = 80    # External port 80
-      protocol = "TCP"
+  template {
+    container {
+      name   = "lost-found-app"
+      image  = "ghcr.io/mohan454522/lost-found-app:latest"
+      cpu    = 1.0
+      memory = "2Gi"
+
+      env {
+        name  = "DATABASE_URL"
+        value = "sqlite:///lost_found.db"
+      }
+      env {
+        name  = "SECRET_KEY"
+        value = "terraform-production-2024"
+      }
+      env {
+        name  = "FLASK_ENV"
+        value = "production"
+      }
+      env {
+        name  = "FLASK_APP"
+        value = "run.py"
+      }
     }
+  }
 
-    environment_variables = {
-      DATABASE_URL = "sqlite:///lost_found.db"
-      SECRET_KEY   = "terraform-production-2024"
-      FLASK_ENV    = "production"
-      FLASK_APP    = "run.py"
+  ingress {
+    external_enabled = true
+    target_port      = 5000
+    traffic_weight {
+      percentage = 100
+      latest_revision = true
     }
   }
 
@@ -55,5 +76,5 @@ resource "azurerm_container_group" "lost_found_app" {
 
 # Output the application URL
 output "application_url" {
-  value = "http://${azurerm_container_group.lost_found_app.fqdn}"
+  value = "https://${azurerm_container_app.main.ingress.0.fqdn}"
 }
