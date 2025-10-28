@@ -62,3 +62,31 @@ jobs:
         echo "✅ Container built and pushed successfully!"
         echo "📦 Image: ghcr.io/mohan454522/lost-found-app:latest"
         echo "🚀 Ready for Azure deployment"
+
+  deploy-to-aks:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      
+    - name: Deploy to AKS
+      run: |
+        cd terraform
+        terraform init
+        terraform apply -auto-approve
+      env:
+        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        
+    - name: Get application URL
+      run: |
+        cd terraform
+        terraform output application_url
