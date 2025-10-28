@@ -88,6 +88,6 @@ jobs:
     - name: Get application URL
       run: |
         cd terraform
-        terraform output application_url
-        echo "🎉 Your app is deployed to Kubernetes (AKS)!"
-        echo "⏳ Wait 5-10 minutes for the Load Balancer IP to be assigned"
+        echo "🎉 Your app is deployed to Azure Container Instances!"
+        echo "🌐 Application URL: http://$(terraform output -raw application_url)"
+        echo "✅ No vCPU quota issues - Deployment successful!"

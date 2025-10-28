@@ -1,13 +1,9 @@
-# Configure providers
+# Configure Azure provider
 terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
       version = "~>3.0"
-    }
-    kubernetes = {
-      source = "hashicorp/kubernetes"
-      version = "2.16.1"
     }
   }
 }
@@ -16,27 +12,38 @@ provider "azurerm" {
   features {}
 }
 
-# Create Azure resource group
+# Create resource group
 resource "azurerm_resource_group" "main" {
   name     = "mohan-lost-found-rg"
   location = "East US"
 }
 
-# Create AKS Kubernetes cluster
-resource "azurerm_kubernetes_cluster" "main" {
-  name                = "mohan-aks-cluster"
+# Create Container Instance (uses less resources)
+resource "azurerm_container_group" "lost_found_app" {
+  name                = "lost-found-app"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
-  dns_prefix          = "mohanaks"
+  ip_address_type     = "Public"
+  dns_name_label      = "mohan-lost-found"
+  os_type             = "Linux"
+  restart_policy      = "Always"
 
-  default_node_pool {
-    name       = "default"
-    node_count = 1
-    vm_size    = "Standard_B2s"
-  }
+  container {
+    name   = "lost-found-app"
+    image  = "ghcr.io/mohan454522/lost-found-app:latest"
+    cpu    = "1.0"
+    memory = "1.5"
 
-  identity {
-    type = "SystemAssigned"
+    ports {
+      port     = 5000
+      protocol = "TCP"
+    }
+
+    environment_variables = {
+      DATABASE_URL = "sqlite:///lost_found.db"
+      SECRET_KEY   = "terraform-production-2024"
+      FLASK_ENV    = "production"
+    }
   }
 
   tags = {
@@ -45,84 +52,7 @@ resource "azurerm_kubernetes_cluster" "main" {
   }
 }
 
-# Configure Kubernetes provider to use our AKS cluster
-provider "kubernetes" {
-  host                   = azurerm_kubernetes_cluster.main.kube_config.0.host
-  client_certificate     = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_certificate)
-  client_key             = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.main.kube_config.0.cluster_ca_certificate)
-}
-
-# Deploy your application to Kubernetes
-resource "kubernetes_deployment" "lost_found_app" {
-  metadata {
-    name = "lost-found-app"
-  }
-
-  spec {
-    replicas = 2
-
-    selector {
-      match_labels = {
-        app = "lost-found-app"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          app = "lost-found-app"
-        }
-      }
-
-      spec {
-        container {
-          image = "ghcr.io/mohan454522/lost-found-app:latest"
-          name  = "lost-found-app"
-
-          port {
-            container_port = 5000
-          }
-
-          env {
-            name  = "DATABASE_URL"
-            value = "sqlite:///lost_found.db"
-          }
-
-          env {
-            name  = "SECRET_KEY"
-            value = "production-secret-key"
-          }
-        }
-      }
-    }
-  }
-
-  depends_on = [azurerm_kubernetes_cluster.main]
-}
-
-resource "kubernetes_service" "lost_found_service" {
-  metadata {
-    name = "lost-found-service"
-  }
-
-  spec {
-    selector = {
-      app = kubernetes_deployment.lost_found_app.spec.0.template.0.metadata.0.labels.app
-    }
-
-    port {
-      port        = 80
-      target_port = 5000
-    }
-
-    type = "LoadBalancer"
-  }
-
-  depends_on = [kubernetes_deployment.lost_found_app]
-}
-
-# Output the public IP
+# Output the application URL
 output "application_url" {
-  value = "http://${kubernetes_service.lost_found_service.status.0.load_balancer.0.ingress.0.ip}"
+  value = "http://${azurerm_container_group.lost_found_app.fqdn}:5000"
 }
